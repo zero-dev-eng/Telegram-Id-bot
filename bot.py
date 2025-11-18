@@ -1,8 +1,8 @@
 import os
 import logging
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, KeyboardButton, ReplyKeyboardMarkup, KeyboardButtonRequestChat, KeyboardButtonRequestUsers
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, CallbackQueryHandler
-from telegram.constants import ParseMode
+from telegram.constants import ParseMode, ChatType
 from telegram.error import BadRequest, TelegramError
 from dotenv import load_dotenv
 
@@ -115,19 +115,19 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE, from_callbac
     
     keyboard = [
         [
-            InlineKeyboardButton("👤 User", callback_data="help_user"),
-            InlineKeyboardButton("⭐ Premium", callback_data="help_premium"),
-            InlineKeyboardButton("🤖 Bot", callback_data="help_bot")
+            InlineKeyboardButton("👤 User", callback_data="select_user"),
+            InlineKeyboardButton("⭐ Premium", callback_data="select_premium"),
+            InlineKeyboardButton("🤖 Bot", callback_data="select_bot")
         ],
         [
-            InlineKeyboardButton("👥 Group", callback_data="help_group"),
-            InlineKeyboardButton("📢 Channel", callback_data="help_channel"),
-            InlineKeyboardButton("💬 Forum", callback_data="help_forum")
+            InlineKeyboardButton("👥 Group", callback_data="select_group"),
+            InlineKeyboardButton("📢 Channel", callback_data="select_channel"),
+            InlineKeyboardButton("💬 Forum", callback_data="select_forum")
         ],
         [
-            InlineKeyboardButton("👥 My Group", callback_data="help_mygroup"),
-            InlineKeyboardButton("📢 My Channel", callback_data="help_mychannel"),
-            InlineKeyboardButton("💬 My Forum", callback_data="help_myforum")
+            InlineKeyboardButton("👥 My Group", callback_data="select_mygroup"),
+            InlineKeyboardButton("📢 My Channel", callback_data="select_mychannel"),
+            InlineKeyboardButton("💬 My Forum", callback_data="select_myforum")
         ],
         [
             InlineKeyboardButton("📢 Update Channel", url=UPDATE_CHANNEL),
@@ -171,6 +171,253 @@ Using this bot, you can get the numerical ID of users.
     except Exception as e:
         logger.error(f"Error in start command: {e}")
 
+async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle button callbacks"""
+    query = update.callback_query
+    await query.answer()
+    
+    data = query.data
+    
+    if data == "check_subscription":
+        await check_subscription_callback(update, context)
+        return
+    
+    # Create reply keyboard based on selection
+    if data == "select_user":
+        # Request any user
+        keyboard = [
+            [KeyboardButton("👤 Select User", request_users=KeyboardButtonRequestUsers(request_id=1, user_is_bot=False))],
+            [KeyboardButton("🔙 Back to Menu")]
+        ]
+        text = "👤 <b>Select User</b>\n\nClick the button below to select a user and get their ID."
+        
+    elif data == "select_premium":
+        # Request premium user
+        keyboard = [
+            [KeyboardButton("⭐ Select Premium User", request_users=KeyboardButtonRequestUsers(request_id=2, user_is_bot=False, user_is_premium=True))],
+            [KeyboardButton("🔙 Back to Menu")]
+        ]
+        text = "⭐ <b>Select Premium User</b>\n\nClick the button below to select a premium user and get their ID."
+        
+    elif data == "select_bot":
+        # Request bot
+        keyboard = [
+            [KeyboardButton("🤖 Select Bot", request_users=KeyboardButtonRequestUsers(request_id=3, user_is_bot=True))],
+            [KeyboardButton("🔙 Back to Menu")]
+        ]
+        text = "🤖 <b>Select Bot</b>\n\nClick the button below to select a bot and get its ID."
+        
+    elif data == "select_group":
+        # Request any group
+        keyboard = [
+            [KeyboardButton("👥 Select Group", request_chat=KeyboardButtonRequestChat(request_id=4, chat_is_channel=False))],
+            [KeyboardButton("🔙 Back to Menu")]
+        ]
+        text = "👥 <b>Select Group</b>\n\nClick the button below to select a group and get its ID."
+        
+    elif data == "select_channel":
+        # Request any channel
+        keyboard = [
+            [KeyboardButton("📢 Select Channel", request_chat=KeyboardButtonRequestChat(request_id=5, chat_is_channel=True))],
+            [KeyboardButton("🔙 Back to Menu")]
+        ]
+        text = "📢 <b>Select Channel</b>\n\nClick the button below to select a channel and get its ID."
+        
+    elif data == "select_forum":
+        # Request forum
+        keyboard = [
+            [KeyboardButton("💬 Select Forum", request_chat=KeyboardButtonRequestChat(request_id=6, chat_is_channel=False, chat_is_forum=True))],
+            [KeyboardButton("🔙 Back to Menu")]
+        ]
+        text = "💬 <b>Select Forum</b>\n\nClick the button below to select a forum and get its ID."
+        
+    elif data == "select_mygroup":
+        # Request group where user is admin
+        keyboard = [
+            [KeyboardButton("👥 Select My Group", request_chat=KeyboardButtonRequestChat(request_id=7, chat_is_channel=False, user_administrator_rights=True))],
+            [KeyboardButton("🔙 Back to Menu")]
+        ]
+        text = "👥 <b>Select My Group</b>\n\nClick the button below to select a group where you are admin."
+        
+    elif data == "select_mychannel":
+        # Request channel where user is admin
+        keyboard = [
+            [KeyboardButton("📢 Select My Channel", request_chat=KeyboardButtonRequestChat(request_id=8, chat_is_channel=True, user_administrator_rights=True))],
+            [KeyboardButton("🔙 Back to Menu")]
+        ]
+        text = "📢 <b>Select My Channel</b>\n\nClick the button below to select a channel where you are admin."
+        
+    elif data == "select_myforum":
+        # Request forum where user is admin
+        keyboard = [
+            [KeyboardButton("💬 Select My Forum", request_chat=KeyboardButtonRequestChat(request_id=9, chat_is_channel=False, chat_is_forum=True, user_administrator_rights=True))],
+            [KeyboardButton("🔙 Back to Menu")]
+        ]
+        text = "💬 <b>Select My Forum</b>\n\nClick the button below to select a forum where you are admin."
+    else:
+        return
+    
+    reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True, one_time_keyboard=False)
+    
+    try:
+        await query.message.reply_text(
+            text,
+            parse_mode=ParseMode.HTML,
+            reply_markup=reply_markup
+        )
+    except Exception as e:
+        logger.error(f"Error in button callback: {e}")
+
+async def handle_user_shared(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle when user shares users"""
+    message = update.message
+    user = update.effective_user
+    
+    if not message.users_shared:
+        return
+    
+    users_shared = message.users_shared
+    user_ids = users_shared.user_ids
+    
+    if len(user_ids) == 1:
+        user_id = user_ids[0]
+        try:
+            # Try to get user info
+            shared_user = await context.bot.get_chat(user_id)
+            
+            response = f"""
+<b>👤 User Information:</b>
+
+<b>User ID:</b> <code>{shared_user.id}</code>
+<b>First Name:</b> {shared_user.first_name}
+<b>Last Name:</b> {shared_user.last_name or 'None'}
+<b>Username:</b> @{shared_user.username if shared_user.username else 'None'}
+<b>Type:</b> {shared_user.type}
+
+<i>Shared by: {user.first_name} (<code>{user.id}</code>)</i>
+
+<b>Developer:</b> {DEVELOPER}
+"""
+        except Exception as e:
+            # If can't get full info, just show ID
+            response = f"""
+<b>👤 User Information:</b>
+
+<b>User ID:</b> <code>{user_id}</code>
+
+<i>Shared by: {user.first_name} (<code>{user.id}</code>)</i>
+
+<b>Developer:</b> {DEVELOPER}
+"""
+    else:
+        # Multiple users shared
+        user_list = "\n".join([f"• <code>{uid}</code>" for uid in user_ids])
+        response = f"""
+<b>👥 Multiple Users Shared:</b>
+
+{user_list}
+
+<i>Shared by: {user.first_name} (<code>{user.id}</code>)</i>
+
+<b>Developer:</b> {DEVELOPER}
+"""
+    
+    try:
+        await message.reply_text(response, parse_mode=ParseMode.HTML)
+    except Exception as e:
+        logger.error(f"Error handling user shared: {e}")
+
+async def handle_chat_shared(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle when user shares a chat"""
+    message = update.message
+    user = update.effective_user
+    
+    if not message.chat_shared:
+        return
+    
+    chat_shared = message.chat_shared
+    chat_id = chat_shared.chat_id
+    
+    try:
+        # Try to get chat info
+        shared_chat = await context.bot.get_chat(chat_id)
+        
+        chat_type = shared_chat.type
+        if chat_type == ChatType.CHANNEL:
+            emoji = "📢"
+            type_name = "Channel"
+        elif chat_type == ChatType.SUPERGROUP:
+            emoji = "👥"
+            type_name = "Supergroup"
+        elif chat_type == ChatType.GROUP:
+            emoji = "👥"
+            type_name = "Group"
+        else:
+            emoji = "💬"
+            type_name = "Chat"
+        
+        response = f"""
+<b>{emoji} {type_name} Information:</b>
+
+<b>Chat ID:</b> <code>{shared_chat.id}</code>
+<b>Title:</b> {shared_chat.title}
+<b>Username:</b> @{shared_chat.username if shared_chat.username else 'None'}
+<b>Type:</b> {type_name}
+
+<i>Shared by: {user.first_name} (<code>{user.id}</code>)</i>
+
+<b>Developer:</b> {DEVELOPER}
+"""
+    except Exception as e:
+        # If can't get full info, just show ID
+        response = f"""
+<b>💬 Chat Information:</b>
+
+<b>Chat ID:</b> <code>{chat_id}</code>
+
+<i>Shared by: {user.first_name} (<code>{user.id}</code>)</i>
+
+<b>Developer:</b> {DEVELOPER}
+"""
+    
+    try:
+        await message.reply_text(response, parse_mode=ParseMode.HTML)
+    except Exception as e:
+        logger.error(f"Error handling chat shared: {e}")
+
+async def handle_text_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle text messages"""
+    message = update.message
+    text = message.text
+    user = update.effective_user
+    
+    # Handle back button
+    if text == "🔙 Back to Menu":
+        await start(update, context)
+        return
+    
+    # Check subscription for other messages
+    if not await force_subscribe_check(update, context):
+        return
+    
+    if message.chat.type == "private":
+        response = f"""
+<b>👋 Hi {user.first_name}!</b>
+
+<b>Your ID:</b> <code>{user.id}</code>
+
+<i>💡 Use the menu buttons to select users or chats!</i>
+
+Use /start to see the main menu.
+
+<b>Developer:</b> {DEVELOPER}
+"""
+        
+        try:
+            await message.reply_text(response, parse_mode=ParseMode.HTML)
+        except Exception as e:
+            logger.error(f"Error handling text message: {e}")
+
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Send help message"""
     
@@ -181,32 +428,29 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 <b>🔍 How to use this bot:</b>
 
 <b>1️⃣ Get User ID:</b>
-• Forward any message from user
-• Share contact
-• Reply to user's message with /id
+• Click "User" button and select any user
+• Click "Premium" button to select premium users
+• Click "Bot" button to select bots
 
 <b>2️⃣ Get Chat ID:</b>
-• Forward any message from group/channel
-• Share group/channel with bot
-• Add bot to group and send /id
+• Click "Group" button and select any group
+• Click "Channel" button and select any channel
+• Click "Forum" button and select any forum
 
-<b>3️⃣ Get Your Info:</b>
-• Just send /start or /id
-• Bot will show your ID
+<b>3️⃣ Get Your Chats:</b>
+• Click "My Group" for groups where you're admin
+• Click "My Channel" for channels where you're admin
+• Click "My Forum" for forums where you're admin
 
 <b>4️⃣ Commands:</b>
-/start - Start bot & get your ID
+/start - Start bot & show main menu
 /help - Show this help
-/id - Get your ID or replied user ID
-/info - Get detailed info
+/id - Get your ID
 
-<b>📝 Examples:</b>
-✅ Forward message → Get sender's ID
-✅ Share contact → Get contact's ID
-✅ Share chat → Get chat ID
-✅ Reply + /id → Get replied user's ID
-
-<b>💡 Tip:</b> You can forward/share anything with me!
+<b>💡 Tips:</b>
+✅ Use the interactive buttons to select chats
+✅ You can also forward messages to get IDs
+✅ Share contacts to get user IDs
 
 <b>Developer:</b> {DEVELOPER}
 <b>Update Channel:</b> {UPDATE_CHANNEL}
@@ -266,7 +510,7 @@ async def get_id_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 <b>Is Premium:</b> {'Yes ⭐' if user.is_premium else 'No'}
 <b>Language:</b> {user.language_code or 'Unknown'}
 
-<i>💡 Tip: Reply to someone's message with /id to get their ID!</i>
+<i>💡 Tip: Use the menu buttons to select users and chats!</i>
 
 <b>Developer:</b> {DEVELOPER}
 """
@@ -277,7 +521,7 @@ async def get_id_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.error(f"Error in get_id command: {e}")
 
 async def handle_forwarded_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle forwarded messages to extract IDs"""
+    """Handle forwarded messages"""
     
     if not await force_subscribe_check(update, context):
         return
@@ -380,83 +624,6 @@ async def handle_shared_contact(update: Update, context: ContextTypes.DEFAULT_TY
     except Exception as e:
         logger.error(f"Error handling shared contact: {e}")
 
-async def handle_chat_shared(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle when user shares a chat with bot"""
-    
-    if not await force_subscribe_check(update, context):
-        return
-    
-    message = update.message
-    user = update.effective_user
-    
-    try:
-        if hasattr(message, 'chat_shared') and message.chat_shared:
-            chat_shared = message.chat_shared
-            chat_id = chat_shared.chat_id
-            
-            response = f"""
-<b>💬 Shared Chat Information:</b>
-
-<b>Chat ID:</b> <code>{chat_id}</code>
-
-<i>Shared by: {user.first_name} (<code>{user.id}</code>)</i>
-
-<i>💡 Add this bot to the chat to get more details!</i>
-
-<b>Developer:</b> {DEVELOPER}
-"""
-            await message.reply_text(response, parse_mode=ParseMode.HTML)
-    except Exception as e:
-        logger.error(f"Error handling shared chat: {e}")
-
-async def handle_text_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle regular text messages"""
-    
-    if not await force_subscribe_check(update, context):
-        return
-    
-    message = update.message
-    user = update.effective_user
-    
-    try:
-        if message.chat.type == "private":
-            response = f"""
-<b>👋 Hi {user.first_name}!</b>
-
-<b>Your ID:</b> <code>{user.id}</code>
-
-<i>💡 Forward any message or share a chat with me to get IDs!</i>
-
-Use /help for more information.
-
-<b>Developer:</b> {DEVELOPER}
-"""
-            
-            keyboard = [
-                [
-                    InlineKeyboardButton("📢 Update Channel", url=UPDATE_CHANNEL),
-                    InlineKeyboardButton("👥 Support Group", url=SUPPORT_GROUP)
-                ]
-            ]
-            reply_markup = InlineKeyboardMarkup(keyboard)
-            
-            await message.reply_text(response, parse_mode=ParseMode.HTML, reply_markup=reply_markup)
-        else:
-            chat = message.chat
-            response = f"""
-<b>📊 Chat Information:</b>
-
-<b>Chat ID:</b> <code>{chat.id}</code>
-<b>Chat Title:</b> {chat.title}
-<b>Chat Type:</b> {chat.type}
-<b>Your ID:</b> <code>{user.id}</code>
-
-<b>Developer:</b> {DEVELOPER}
-"""
-            await message.reply_text(response, parse_mode=ParseMode.HTML)
-    except Exception as e:
-        logger.error(f"Error handling text message: {e}")
-
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
     """Log errors"""
     logger.error(f'Update {update} caused error {context.error}', exc_info=context.error)
@@ -475,17 +642,31 @@ def main():
     try:
         application = Application.builder().token(BOT_TOKEN).build()
         
+        # Command handlers
         application.add_handler(CommandHandler("start", start))
         application.add_handler(CommandHandler("help", help_command))
         application.add_handler(CommandHandler("id", get_id_command))
         application.add_handler(CommandHandler("info", get_id_command))
         
-        application.add_handler(CallbackQueryHandler(check_subscription_callback, pattern="^check_subscription$"))
-        application.add_handler(MessageHandler(filters.CONTACT, handle_shared_contact))
-        application.add_handler(MessageHandler(filters.FORWARDED, handle_forwarded_message))
+        # Callback query handler
+        application.add_handler(CallbackQueryHandler(button_callback))
+        
+        # Handle user shared
+        application.add_handler(MessageHandler(filters.StatusUpdate.USERS_SHARED, handle_user_shared))
+        
+        # Handle chat shared
         application.add_handler(MessageHandler(filters.StatusUpdate.CHAT_SHARED, handle_chat_shared))
+        
+        # Handle contacts
+        application.add_handler(MessageHandler(filters.CONTACT, handle_shared_contact))
+        
+        # Handle forwarded messages
+        application.add_handler(MessageHandler(filters.FORWARDED & ~filters.COMMAND, handle_forwarded_message))
+        
+        # Handle text messages
         application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text_message))
         
+        # Error handler
         application.add_error_handler(error_handler)
         
         logger.info("✅ Bot started successfully!")
