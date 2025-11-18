@@ -16,49 +16,58 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
+if not BOT_TOKEN:
+    logger.error("❌ Error: BOT_TOKEN not found in environment variables!")
+    exit()
+    
 DEVELOPER = "@Zeroboy216"
 UPDATE_CHANNEL = "https://t.me/zerodevbro"
 SUPPORT_GROUP = "https://t.me/zerodevsupport1"
 
-def get_main_keyboard():
-    """Create the main keyboard with chat/user selection buttons"""
-    # Create administrator rights object for "My" buttons
-    admin_rights = ChatAdministratorRights(
-        is_anonymous=False,
-        can_manage_chat=True,
-        can_delete_messages=True,
-        can_manage_video_chats=True,
-        can_restrict_members=True,
-        can_promote_members=True,
-        can_change_info=True,
-        can_invite_users=True,
-        can_post_messages=True,
-        can_edit_messages=True,
-        can_pin_messages=True,
-        can_post_stories=True,
-        can_edit_stories=True,
-        can_delete_stories=True,
-        can_manage_topics=True
-    )
-    
-    keyboard = [
-        [
-            KeyboardButton("👤 User", request_users=KeyboardButtonRequestUsers(request_id=1, user_is_bot=False)),
-            KeyboardButton("⭐ Premium", request_users=KeyboardButtonRequestUsers(request_id=2, user_is_bot=False, user_is_premium=True)),
-            KeyboardButton("🤖 Bot", request_users=KeyboardButtonRequestUsers(request_id=3, user_is_bot=True))
-        ],
-        [
-            KeyboardButton("👥 Group", request_chat=KeyboardButtonRequestChat(request_id=4, chat_is_channel=False)),
-            KeyboardButton("📢 Channel", request_chat=KeyboardButtonRequestChat(request_id=5, chat_is_channel=True)),
-            KeyboardButton("💬 Forum", request_chat=KeyboardButtonRequestChat(request_id=6, chat_is_channel=False, chat_is_forum=True))
-        ],
-        [
-            KeyboardButton("👥 My Group", request_chat=KeyboardButtonRequestChat(request_id=7, chat_is_channel=False, user_administrator_rights=admin_rights)),
-            KeyboardButton("📢 My Channel", request_chat=KeyboardButtonRequestChat(request_id=8, chat_is_channel=True, user_administrator_rights=admin_rights)),
-            KeyboardButton("💬 My Forum", request_chat=KeyboardButtonRequestChat(request_id=9, chat_is_channel=False, chat_is_forum=True, user_administrator_rights=admin_rights))
-        ]
+# --- Performance Optimization: Create Keyboard as a Global Constant ---
+
+# Define the admin rights needed for "My" buttons once
+DEFAULT_ADMIN_RIGHTS = ChatAdministratorRights(
+    is_anonymous=False,
+    can_manage_chat=True,
+    can_delete_messages=True,
+    can_manage_video_chats=True,
+    can_restrict_members=True,
+    can_promote_members=True,
+    can_change_info=True,
+    can_invite_users=True,
+    can_post_messages=True,
+    can_edit_messages=True,
+    can_pin_messages=True,
+    can_post_stories=True,
+    can_edit_stories=True,
+    can_delete_stories=True,
+    can_manage_topics=True
+)
+
+# Define the keyboard layout once
+KEYBOARD_LAYOUT = [
+    [
+        KeyboardButton("👤 User", request_users=KeyboardButtonRequestUsers(request_id=1, user_is_bot=False)),
+        KeyboardButton("⭐ Premium", request_users=KeyboardButtonRequestUsers(request_id=2, user_is_bot=False, user_is_premium=True)),
+        KeyboardButton("🤖 Bot", request_users=KeyboardButtonRequestUsers(request_id=3, user_is_bot=True))
+    ],
+    [
+        KeyboardButton("👥 Group", request_chat=KeyboardButtonRequestChat(request_id=4, chat_is_channel=False)),
+        KeyboardButton("📢 Channel", request_chat=KeyboardButtonRequestChat(request_id=5, chat_is_channel=True)),
+        KeyboardButton("💬 Forum", request_chat=KeyboardButtonRequestChat(request_id=6, chat_is_channel=False, chat_is_forum=True))
+    ],
+    [
+        KeyboardButton("👥 My Group", request_chat=KeyboardButtonRequestChat(request_id=7, chat_is_channel=False, user_administrator_rights=DEFAULT_ADMIN_RIGHTS)),
+        KeyboardButton("📢 My Channel", request_chat=KeyboardButtonRequestChat(request_id=8, chat_is_channel=True, user_administrator_rights=DEFAULT_ADMIN_RIGHTS)),
+        KeyboardButton("💬 My Forum", request_chat=KeyboardButtonRequestChat(request_id=9, chat_is_channel=False, chat_is_forum=True, user_administrator_rights=DEFAULT_ADMIN_RIGHTS))
     ]
-    return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+]
+
+# Create the final ReplyKeyboardMarkup object as a constant
+MAIN_KEYBOARD = ReplyKeyboardMarkup(KEYBOARD_LAYOUT, resize_keyboard=True)
+
+# ---------------------------------------------------------------------
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Send welcome message when /start is issued"""
@@ -84,11 +93,13 @@ Using this bot, you can get the numerical ID of users.
 """
     
     try:
-        await update.message.reply_text(
+        # Use reply_html (shortcut for reply_text with HTML parse_mode)
+        # Add reply_to_message_id to explicitly reply to the /start command
+        await update.message.reply_html(
             welcome_message,
-            parse_mode=ParseMode.HTML,
-            reply_markup=get_main_keyboard(),
-            disable_web_page_preview=True
+            reply_markup=MAIN_KEYBOARD, # Use global constant
+            disable_web_page_preview=True,
+            reply_to_message_id=update.message.message_id
         )
     except Exception as e:
         logger.error(f"Error in start command: {e}")
@@ -130,10 +141,9 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 """
     
     try:
-        await update.message.reply_text(
+        await update.message.reply_html(
             help_text,
-            parse_mode=ParseMode.HTML,
-            reply_markup=get_main_keyboard(),
+            reply_markup=MAIN_KEYBOARD, # Use global constant
             disable_web_page_preview=True
         )
     except Exception as e:
@@ -177,12 +187,12 @@ async def get_id_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 """
     
     try:
-        await message.reply_text(response, parse_mode=ParseMode.HTML, reply_markup=get_main_keyboard())
+        await message.reply_html(response, reply_markup=MAIN_KEYBOARD) # Use global constant
     except Exception as e:
         logger.error(f"Error in get_id command: {e}")
 
 async def handle_user_shared(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle when user shares users"""
+    """Handle when user shares users (from keyboard buttons)"""
     message = update.message
     user = update.effective_user
     
@@ -195,7 +205,9 @@ async def handle_user_shared(update: Update, context: ContextTypes.DEFAULT_TYPE)
     if len(user_ids) == 1:
         user_id = user_ids[0]
         try:
-            # Try to get user info
+            # Try to get user info. 
+            # Note: get_chat(user_id) returns a Chat object, not a User object.
+            # We can only get basic info (ID, name, username, type).
             shared_user = await context.bot.get_chat(user_id)
             
             response = f"""
@@ -212,7 +224,8 @@ async def handle_user_shared(update: Update, context: ContextTypes.DEFAULT_TYPE)
 <b>Developer:</b> {DEVELOPER}
 """
         except Exception as e:
-            # If can't get full info, just show ID
+            # If can't get full info (e.g., bot doesn't know user), just show ID
+            logger.warning(f"Could not get_chat for user {user_id}: {e}")
             response = f"""
 <b>👤 User Information:</b>
 
@@ -236,12 +249,12 @@ async def handle_user_shared(update: Update, context: ContextTypes.DEFAULT_TYPE)
 """
     
     try:
-        await message.reply_text(response, parse_mode=ParseMode.HTML, reply_markup=get_main_keyboard())
+        await message.reply_html(response, reply_markup=MAIN_KEYBOARD) # Use global constant
     except Exception as e:
         logger.error(f"Error handling user shared: {e}")
 
 async def handle_chat_shared(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle when user shares a chat"""
+    """Handle when user shares a chat (from keyboard buttons)"""
     message = update.message
     user = update.effective_user
     
@@ -283,6 +296,7 @@ async def handle_chat_shared(update: Update, context: ContextTypes.DEFAULT_TYPE)
 """
     except Exception as e:
         # If can't get full info, just show ID
+        logger.warning(f"Could not get_chat for chat {chat_id}: {e}")
         response = f"""
 <b>💬 Chat Information:</b>
 
@@ -294,7 +308,7 @@ async def handle_chat_shared(update: Update, context: ContextTypes.DEFAULT_TYPE)
 """
     
     try:
-        await message.reply_text(response, parse_mode=ParseMode.HTML, reply_markup=get_main_keyboard())
+        await message.reply_html(response, reply_markup=MAIN_KEYBOARD) # Use global constant
     except Exception as e:
         logger.error(f"Error handling chat shared: {e}")
 
@@ -306,9 +320,10 @@ async def handle_forwarded_message(update: Update, context: ContextTypes.DEFAULT
     
     try:
         if message.forward_from:
+            # Forwarded from a User (who allows it)
             forward_user = message.forward_from
             response = f"""
-<b>✉️ Forwarded Message Info:</b>
+<b>✉️ Forwarded Message Info (User):</b>
 
 <b>Sender ID:</b> <code>{forward_user.id}</code>
 <b>First Name:</b> {forward_user.first_name}
@@ -321,9 +336,10 @@ async def handle_forwarded_message(update: Update, context: ContextTypes.DEFAULT
 
 <b>Developer:</b> {DEVELOPER}
 """
-            await message.reply_text(response, parse_mode=ParseMode.HTML, reply_markup=get_main_keyboard())
+            await message.reply_html(response, reply_markup=MAIN_KEYBOARD) # Use global constant
             
         elif message.forward_from_chat:
+            # Forwarded from a Channel or Group
             chat = message.forward_from_chat
             chat_type = chat.type
             
@@ -341,7 +357,7 @@ async def handle_forwarded_message(update: Update, context: ContextTypes.DEFAULT
                 type_name = "Chat"
             
             response = f"""
-<b>{emoji} {type_name} Information:</b>
+<b>{emoji} {type_name} Information (Forwarded):</b>
 
 <b>Chat ID:</b> <code>{chat.id}</code>
 <b>Title:</b> {chat.title}
@@ -352,22 +368,23 @@ async def handle_forwarded_message(update: Update, context: ContextTypes.DEFAULT
 
 <b>Developer:</b> {DEVELOPER}
 """
-            await message.reply_text(response, parse_mode=ParseMode.HTML, reply_markup=get_main_keyboard())
+            await message.reply_html(response, reply_markup=MAIN_KEYBOARD) # Use global constant
         
         elif message.forward_sender_name:
+            # Forwarded from a user who hides their account
             response = f"""
 <b>🔒 Privacy Protected User</b>
 
 <b>Name:</b> {message.forward_sender_name}
 <b>User ID:</b> <i>Hidden (User has privacy settings enabled)</i>
 
-<i>This user has enabled privacy settings, so their ID cannot be retrieved.</i>
+<i>This user has enabled forward privacy settings, so their ID cannot be retrieved.</i>
 
 <i>Forwarded by: {user.first_name}</i>
 
 <b>Developer:</b> {DEVELOPER}
 """
-            await message.reply_text(response, parse_mode=ParseMode.HTML, reply_markup=get_main_keyboard())
+            await message.reply_html(response, reply_markup=MAIN_KEYBOARD) # Use global constant
     except Exception as e:
         logger.error(f"Error handling forwarded message: {e}")
 
@@ -392,12 +409,12 @@ async def handle_shared_contact(update: Update, context: ContextTypes.DEFAULT_TY
 """
     
     try:
-        await message.reply_text(response, parse_mode=ParseMode.HTML, reply_markup=get_main_keyboard())
+        await message.reply_html(response, reply_markup=MAIN_KEYBOARD) # Use global constant
     except Exception as e:
         logger.error(f"Error handling shared contact: {e}")
 
 async def handle_text_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle text messages"""
+    """Handle other text messages"""
     message = update.message
     user = update.effective_user
     
@@ -415,11 +432,11 @@ Use /start to see the welcome message.
 """
         
         try:
-            await message.reply_text(response, parse_mode=ParseMode.HTML, reply_markup=get_main_keyboard())
+            await message.reply_html(response, reply_markup=MAIN_KEYBOARD) # Use global constant
         except Exception as e:
             logger.error(f"Error handling text message: {e}")
     else:
-        # In group chat
+        # In group chat, reply with chat info
         chat = message.chat
         response = f"""
 <b>📊 Chat Information:</b>
@@ -432,7 +449,7 @@ Use /start to see the welcome message.
 <b>Developer:</b> {DEVELOPER}
 """
         try:
-            await message.reply_text(response, parse_mode=ParseMode.HTML)
+            await message.reply_html(response)
         except Exception as e:
             logger.error(f"Error handling group message: {e}")
 
@@ -442,10 +459,6 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
 
 def main():
     """Start the bot"""
-    if not BOT_TOKEN:
-        logger.error("❌ Error: BOT_TOKEN not found in environment variables!")
-        return
-    
     logger.info("🤖 Starting UserInfo Bot...")
     logger.info(f"👨‍💻 Developer: {DEVELOPER}")
     logger.info(f"📢 Update Channel: {UPDATE_CHANNEL}")
@@ -458,12 +471,12 @@ def main():
         application.add_handler(CommandHandler("start", start))
         application.add_handler(CommandHandler("help", help_command))
         application.add_handler(CommandHandler("id", get_id_command))
-        application.add_handler(CommandHandler("info", get_id_command))
+        application.add_handler(CommandHandler("info", get_id_command)) # Alias
         
-        # Handle user shared
+        # Handle user shared (from keyboard)
         application.add_handler(MessageHandler(filters.StatusUpdate.USERS_SHARED, handle_user_shared))
         
-        # Handle chat shared
+        # Handle chat shared (from keyboard)
         application.add_handler(MessageHandler(filters.StatusUpdate.CHAT_SHARED, handle_chat_shared))
         
         # Handle contacts
@@ -472,13 +485,13 @@ def main():
         # Handle forwarded messages
         application.add_handler(MessageHandler(filters.FORWARDED & ~filters.COMMAND, handle_forwarded_message))
         
-        # Handle text messages
+        # Handle any other text messages
         application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text_message))
         
         # Error handler
         application.add_error_handler(error_handler)
         
-        logger.info("✅ Bot started successfully!")
+        logger.info("✅ Bot started successfully! Polling for updates...")
         application.run_polling(
             allowed_updates=Update.ALL_TYPES,
             drop_pending_updates=True
