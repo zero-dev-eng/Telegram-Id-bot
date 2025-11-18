@@ -1,7 +1,7 @@
 import os
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, CallbackQueryHandler
-from telegram.constants import ParseMode
+from telegram.constants import ParseMode, UpdateType # Import UpdateType for explicit allowed_updates
 from telegram.error import BadRequest
 from dotenv import load_dotenv
 
@@ -14,7 +14,7 @@ UPDATE_CHANNEL = "https://t.me/zerodevbro"
 SUPPORT_GROUP = "https://t.me/zerodevsupport1"
 FORCE_SUB_CHANNEL = os.getenv("FORCE_SUB_CHANNEL", "@zerodevbro")  # Channel username for force subscribe
 
-# --- Utility Functions (Removed reaction-related functions) ---
+# --- Utility Functions ---
 
 async def check_user_subscription(user_id: int, context: ContextTypes.DEFAULT_TYPE) -> bool:
     """Check if user is subscribed to the required channel"""
@@ -494,7 +494,16 @@ def main():
     
     # Start bot
     print("✅ Bot started! Press Ctrl+C to stop.")
-    application.run_polling(allowed_updates=Update.ALL_TYPES)
+    
+    # Explicitly list allowed updates to avoid the Attribute error related to older library versions
+    allowed_updates_list = [
+        UpdateType.MESSAGE, 
+        UpdateType.EDITED_MESSAGE, 
+        UpdateType.CHANNEL_POST, 
+        UpdateType.EDITED_CHANNEL_POST,
+        UpdateType.CALLBACK_QUERY
+    ]
+    application.run_polling(allowed_updates=allowed_updates_list)
 
 if __name__ == "__main__":
     main()
