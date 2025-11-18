@@ -1,6 +1,6 @@
 import os
 import logging
-from telegram import Update, KeyboardButton, ReplyKeyboardMarkup, KeyboardButtonRequestChat, KeyboardButtonRequestUsers
+from telegram import Update, KeyboardButton, ReplyKeyboardMarkup, KeyboardButtonRequestChat, KeyboardButtonRequestUsers, ChatAdministratorRights
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 from telegram.constants import ParseMode, ChatType
 from telegram.error import BadRequest, TelegramError
@@ -22,6 +22,20 @@ SUPPORT_GROUP = "https://t.me/zerodevsupport1"
 
 def get_main_keyboard():
     """Create the main keyboard with chat/user selection buttons"""
+    # Create administrator rights object for "My" buttons
+    admin_rights = ChatAdministratorRights(
+        can_manage_chat=True,
+        can_post_messages=True,
+        can_edit_messages=True,
+        can_delete_messages=True,
+        can_manage_video_chats=True,
+        can_restrict_members=True,
+        can_promote_members=True,
+        can_change_info=True,
+        can_invite_users=True,
+        can_pin_messages=True
+    )
+    
     keyboard = [
         [
             KeyboardButton("👤 User", request_users=KeyboardButtonRequestUsers(request_id=1, user_is_bot=False)),
@@ -34,9 +48,9 @@ def get_main_keyboard():
             KeyboardButton("💬 Forum", request_chat=KeyboardButtonRequestChat(request_id=6, chat_is_channel=False, chat_is_forum=True))
         ],
         [
-            KeyboardButton("👥 My Group", request_chat=KeyboardButtonRequestChat(request_id=7, chat_is_channel=False, user_administrator_rights=True)),
-            KeyboardButton("📢 My Channel", request_chat=KeyboardButtonRequestChat(request_id=8, chat_is_channel=True, user_administrator_rights=True)),
-            KeyboardButton("💬 My Forum", request_chat=KeyboardButtonRequestChat(request_id=9, chat_is_channel=False, chat_is_forum=True, user_administrator_rights=True))
+            KeyboardButton("👥 My Group", request_chat=KeyboardButtonRequestChat(request_id=7, chat_is_channel=False, user_administrator_rights=admin_rights)),
+            KeyboardButton("📢 My Channel", request_chat=KeyboardButtonRequestChat(request_id=8, chat_is_channel=True, user_administrator_rights=admin_rights)),
+            KeyboardButton("💬 My Forum", request_chat=KeyboardButtonRequestChat(request_id=9, chat_is_channel=False, chat_is_forum=True, user_administrator_rights=admin_rights))
         ]
     ]
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
