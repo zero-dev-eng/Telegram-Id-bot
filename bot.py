@@ -191,40 +191,45 @@ async def get_id_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         logger.error(f"Error in get_id command: {e}")
 
+# ####################################################################
+# ## THIS IS THE FIXED FUNCTION
+# ####################################################################
 async def handle_user_shared(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle when user shares users (from keyboard buttons)"""
     message = update.message
     user = update.effective_user
     
-    if not message.users_shared:
+    # Check if users_shared exists and has users
+    if not message.users_shared or not message.users_shared.users:
         return
     
-    users_shared = message.users_shared
-    user_ids = users_shared.user_ids
+    # FIX: The correct attribute is .users, which is a list of SharedUser objects
+    shared_users = message.users_shared.users
     
-    if len(user_ids) == 1:
-        user_id = user_ids[0]
+    if len(shared_users) == 1:
+        # FIX: Get the first user from the list
+        shared_user = shared_users[0]
+        # FIX: Get the user_id from the SharedUser object
+        user_id = shared_user.user_id  
+        
         try:
-            # Try to get user info. 
-            # Note: get_chat(user_id) returns a Chat object, not a User object.
-            # We can only get basic info (ID, name, username, type).
-            shared_user = await context.bot.get_chat(user_id)
+            # Try to get user info.
+            chat = await context.bot.get_chat(user_id)
             
             response = f"""
 <b>👤 User Information:</b>
 
-<b>User ID:</b> <code>{shared_user.id}</code>
-<b>First Name:</b> {shared_user.first_name}
-<b>Last Name:</b> {shared_user.last_name or 'None'}
-<b>Username:</b> @{shared_user.username if shared_user.username else 'None'}
-<b>Type:</b> {shared_user.type}
+<b>User ID:</b> <code>{chat.id}</code>
+<b>First Name:</b> {chat.first_name}
+<b>Last Name:</b> {chat.last_name or 'None'}
+<b>Username:</b> @{chat.username if chat.username else 'None'}
+<b>Type:</b> {chat.type}
 
 <i>Shared by: {user.first_name} (<code>{user.id}</code>)</i>
 
 <b>Developer:</b> {DEVELOPER}
 """
         except Exception as e:
-            # If can't get full info (e.g., bot doesn't know user), just show ID
             logger.warning(f"Could not get_chat for user {user_id}: {e}")
             response = f"""
 <b>👤 User Information:</b>
@@ -237,7 +242,8 @@ async def handle_user_shared(update: Update, context: ContextTypes.DEFAULT_TYPE)
 """
     else:
         # Multiple users shared
-        user_list = "\n".join([f"• <code>{uid}</code>" for uid in user_ids])
+        # FIX: Iterate over shared_users list and get .user_id from each
+        user_list = "\n".join([f"• <code>{u.user_id}</code>" for u in shared_users])
         response = f"""
 <b>👥 Multiple Users Shared:</b>
 
@@ -262,7 +268,9 @@ async def handle_chat_shared(update: Update, context: ContextTypes.DEFAULT_TYPE)
         return
     
     chat_shared = message.chat_shared
-    chat_id = chat_shared.chat_id
+    
+    # This attribute is correct
+    chat_id = chat_shared.chat_id 
     
     try:
         # Try to get chat info
