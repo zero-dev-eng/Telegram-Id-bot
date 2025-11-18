@@ -24,16 +24,21 @@ def get_main_keyboard():
     """Create the main keyboard with chat/user selection buttons"""
     # Create administrator rights object for "My" buttons
     admin_rights = ChatAdministratorRights(
+        is_anonymous=False,
         can_manage_chat=True,
-        can_post_messages=True,
-        can_edit_messages=True,
         can_delete_messages=True,
         can_manage_video_chats=True,
         can_restrict_members=True,
         can_promote_members=True,
         can_change_info=True,
         can_invite_users=True,
-        can_pin_messages=True
+        can_post_messages=True,
+        can_edit_messages=True,
+        can_pin_messages=True,
+        can_post_stories=True,
+        can_edit_stories=True,
+        can_delete_stories=True,
+        can_manage_topics=True
     )
     
     keyboard = [
