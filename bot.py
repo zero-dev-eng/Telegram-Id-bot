@@ -1,5 +1,6 @@
 import os
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+import random
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReactionType
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, CallbackQueryHandler
 from telegram.constants import ParseMode
 from telegram.error import BadRequest
@@ -7,11 +8,45 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# --- Configuration ---
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 DEVELOPER = "@Zeroboy216"
 UPDATE_CHANNEL = "https://t.me/zerodevbro"
 SUPPORT_GROUP = "https://t.me/zerodevsupport1"
 FORCE_SUB_CHANNEL = os.getenv("FORCE_SUB_CHANNEL", "@zerodevbro")  # Channel username for force subscribe
+REACTION_EMOJIS = ["❤️", "🥰", "🔥", "💋", "😍", "😘", "☺️"]
+
+# --- Utility Functions ---
+
+def get_random_reaction():
+    """Returns a random emoji for message reaction."""
+    return random.choice(REACTION_EMOJIS)
+
+async def set_message_reaction(message, context: ContextTypes.DEFAULT_TYPE):
+    """Sets a random reaction on the given message."""
+    if not message:
+        return
+        
+    # Skip if the message is part of a media group
+    if message.media_group_id:
+        return
+
+    message_id = message.message_id
+    chat_id = message.chat.id
+    reaction_emoji = get_random_reaction() 
+
+    try:
+        # Note: set_message_reaction expects a list of ReactionType objects
+        await context.bot.set_message_reaction(
+            chat_id=chat_id, 
+            message_id=message_id, 
+            reaction=[ReactionType(type="emoji", emoji=reaction_emoji)], 
+            is_big=True
+        )
+    except Exception as e:
+        # Handle cases where bot cannot set reaction (e.g., old message, private chat error)
+        print(f"Error setting reaction on message {message_id} in chat {chat_id}: {e}")
+
 
 async def check_user_subscription(user_id: int, context: ContextTypes.DEFAULT_TYPE) -> bool:
     """Check if user is subscribed to the required channel"""
@@ -80,6 +115,8 @@ Please click the button below to join and then check again. 🙏🏻
     
     return True
 
+# --- Handlers ---
+
 async def check_subscription_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle check subscription button click"""
     query = update.callback_query
@@ -102,6 +139,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE, from_callbac
     if not from_callback:
         if not await force_subscribe_check(update, context):
             return
+    
+    # Set reaction only on incoming message, not on callback edit
+    if update.message and not from_callback:
+        await set_message_reaction(update.message, context)
     
     user = update.effective_user
     user_id = user.id
@@ -169,6 +210,10 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await force_subscribe_check(update, context):
         return
     
+    # Set reaction
+    if update.message:
+        await set_message_reaction(update.message, context)
+        
     help_text = f"""
 <b>🔍 How to use this bot:</b>
 
@@ -227,6 +272,10 @@ async def get_id_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await force_subscribe_check(update, context):
         return
     
+    # Set reaction
+    if update.message:
+        await set_message_reaction(update.message, context)
+        
     message = update.message
     user = update.effective_user
     
@@ -272,6 +321,10 @@ async def handle_forwarded_message(update: Update, context: ContextTypes.DEFAULT
     if not await force_subscribe_check(update, context):
         return
     
+    # Set reaction
+    if update.message:
+        await set_message_reaction(update.message, context)
+        
     message = update.message
     user = update.effective_user
     
@@ -350,6 +403,10 @@ async def handle_shared_contact(update: Update, context: ContextTypes.DEFAULT_TY
     if not await force_subscribe_check(update, context):
         return
     
+    # Set reaction
+    if update.message:
+        await set_message_reaction(update.message, context)
+        
     message = update.message
     contact = message.contact
     user = update.effective_user
@@ -376,6 +433,10 @@ async def handle_chat_shared(update: Update, context: ContextTypes.DEFAULT_TYPE)
     if not await force_subscribe_check(update, context):
         return
     
+    # Set reaction
+    if update.message:
+        await set_message_reaction(update.message, context)
+        
     message = update.message
     user = update.effective_user
     
@@ -404,6 +465,10 @@ async def handle_text_message(update: Update, context: ContextTypes.DEFAULT_TYPE
     if not await force_subscribe_check(update, context):
         return
     
+    # Set reaction
+    if update.message:
+        await set_message_reaction(update.message, context)
+        
     message = update.message
     user = update.effective_user
     
@@ -479,6 +544,7 @@ def main():
     application.add_handler(MessageHandler(filters.FORWARDED, handle_forwarded_message))
     
     # Handle shared chats (new feature)
+    # The filter for chat_shared is complex, using the appropriate StatusUpdate filter.
     application.add_handler(MessageHandler(filters.StatusUpdate.CHAT_SHARED, handle_chat_shared))
     
     # Handle regular text messages
