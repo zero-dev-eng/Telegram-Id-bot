@@ -1,7 +1,11 @@
 import os
 import random
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReactionType
+# Using explicit imports to troubleshoot deployment import error
+from telegram import Update, ReactionType
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, CallbackQueryHandler
+# Keyboards and Markup are often imported from telegram.ext in older or restricted environments.
+# If this still fails, they belong in 'from telegram import InlineKeyboardButton, InlineKeyboardMarkup'
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup 
 from telegram.constants import ParseMode
 from telegram.error import BadRequest
 from dotenv import load_dotenv
@@ -544,7 +548,6 @@ def main():
     application.add_handler(MessageHandler(filters.FORWARDED, handle_forwarded_message))
     
     # Handle shared chats (new feature)
-    # The filter for chat_shared is complex, using the appropriate StatusUpdate filter.
     application.add_handler(MessageHandler(filters.StatusUpdate.CHAT_SHARED, handle_chat_shared))
     
     # Handle regular text messages
