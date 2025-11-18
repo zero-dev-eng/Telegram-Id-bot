@@ -1,12 +1,10 @@
 import os
 import random
-# Using explicit imports to troubleshoot deployment import error
-from telegram import Update, ReactionType
+# Import core classes
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, CallbackQueryHandler
-# Keyboards and Markup are often imported from telegram.ext in older or restricted environments.
-# If this still fails, they belong in 'from telegram import InlineKeyboardButton, InlineKeyboardMarkup'
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup 
-from telegram.constants import ParseMode
+# Import constants to ensure ReactionType is available
+from telegram.constants import ParseMode, ReactionType 
 from telegram.error import BadRequest
 from dotenv import load_dotenv
 
@@ -44,6 +42,7 @@ async def set_message_reaction(message, context: ContextTypes.DEFAULT_TYPE):
         await context.bot.set_message_reaction(
             chat_id=chat_id, 
             message_id=message_id, 
+            # ReactionType is imported from telegram.constants
             reaction=[ReactionType(type="emoji", emoji=reaction_emoji)], 
             is_big=True
         )
